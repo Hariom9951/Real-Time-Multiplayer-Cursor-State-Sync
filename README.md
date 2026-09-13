@@ -1,182 +1,275 @@
-# SyncSpace
-### Real-Time Multiplayer Cursor & State Synchronization
+# SyncSpace — Real-Time Multiplayer Cursor & State Sync
+
+SyncSpace is a real-time collaborative workspace where multiple users can join the same room and see each other's cursor movements, clicks, presence, and activity updates in real time. The application uses Socket.IO for real-time communication.
+
+---
 
 ## 🚀 Live Demo
-- **Live Frontend**: [https://real-time-multiplayer-cursor-state-tau.vercel.app](https://real-time-multiplayer-cursor-state-tau.vercel.app)
-- **Live Backend**: [https://syncspace-backend-1rzf.onrender.com](https://syncspace-backend-1rzf.onrender.com)
-- **Backend Health Check**: [https://syncspace-backend-1rzf.onrender.com/health](https://syncspace-backend-1rzf.onrender.com/health)
 
-## 📦 GitHub Repository
-[https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync](https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync)
+- **Frontend:** [https://real-time-multiplayer-cursor-state-tau.vercel.app](https://real-time-multiplayer-cursor-state-tau.vercel.app)
+- **Backend:** [https://syncspace-backend-1rzf.onrender.com](https://syncspace-backend-1rzf.onrender.com)
+- **Backend Health Check:** [https://syncspace-backend-1rzf.onrender.com/health](https://syncspace-backend-1rzf.onrender.com/health)
+- **GitHub Repository:** [https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync](https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync)
 
----
-
-## Overview
-
-**SyncSpace** is an ultra-low latency, real-time multiplayer workspace where distributed users interact within shared collaborative rooms. Users experience synchronous multiplayer presence with high-performance cursor tracking, visual click waves, live participant rosters, and instant join/leave synchronization powered by WebSockets and Socket.IO.
+The frontend is deployed on Vercel and the real-time Socket.IO backend is deployed on Render.
 
 ---
 
-## Features
+## ✨ Features
 
-- **Real-Time Multiplayer Cursor Synchronization**: Live coordinates transmitted across peers with sub-25ms network response.
-- **Room-Based Collaboration**: Isolated collaboration spaces identified by Room IDs, preventing cross-room event leaking.
-- **User Presence**: Live tracking of online peers, participant counts, and unique deterministic color assignments.
-- **Smooth Cursor Interpolation**: Linear interpolation (LERP) decoupled from network packets via `requestAnimationFrame` for buttery-smooth 60 FPS remote cursor motion.
-- **Shared Click Indicators**: Interactive ripple wave animations broadcast across peers on canvas clicks.
-- **Real-Time Activity Feed**: Toast and event updates notifying users when peers join or leave.
-- **Reconnection Handling**: Resilient Socket.IO reconnection logic with exponential backoff and automatic room re-join.
-- **Server-Side Validation**: Strict input boundary validation, string length limits, numeric coordinate bounds, and socket ownership verification.
-- **Performance-Conscious Cursor Updates**: ~40 FPS client throttling with coordinate refs, avoiding wasteful React re-renders.
-- **Responsive UI**: Modern glassmorphic interface built with Tailwind CSS, supporting varied screen sizes and keyboard shortcuts.
+- Real-time multiplayer cursor synchronization
+- Multiple users in the same collaboration room
+- Live online user count
+- Deterministic user colors
+- Real-time cursor interpolation using requestAnimationFrame
+- Synchronized click ripple effects
+- Real-time activity feed
+- User join/leave presence events
+- Automatic reconnection and room re-joining
+- Connection status indicator
+- Reconnecting / connection-lost states
+- Copy Room ID functionality
+- Empty-room state
+- Mobile-responsive sidebar
+- Keyboard accessibility
+- Server-side coordinate validation
+- Socket ownership validation
+- Production-ready CORS configuration
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 ### Frontend
-- **React (v19)**
-- **TypeScript**
-- **Vite**
-- **Tailwind CSS**
-- **Socket.IO Client**
-- **Lucide Icons & Canvas Confetti**
+- React
+- TypeScript
+- Vite
+- CSS / responsive design
 
 ### Backend
-- **Node.js**
-- **Express**
-- **Socket.IO (v4)**
-- **TypeScript & tsx**
-- **CORS**
+- Node.js
+- Express
+- Socket.IO
+- TypeScript
+
+### Deployment
+- Vercel — Frontend
+- Render — Backend
+
+### Development
+- Git
+- GitHub
 
 ---
 
-## Architecture
+## 🏗️ Architecture
 
+```text
+┌──────────────────────────────┐
+│            Vercel            │
+│      React + TypeScript      │
+│        Vite Frontend         │
+└──────────────┬───────────────┘
+               │
+               │ Socket.IO
+               │ WebSocket
+               ▼
+┌──────────────────────────────┐
+│            Render            │
+│      Node.js + Express       │
+│          Socket.IO           │
+└──────────────┬───────────────┘
+               │
+               ▼
+       Room / User State
+     Cursor / Click Events
+      Presence / Activity
 ```
-Browser
-   ↓
-React + TypeScript
-   ↓
-Socket.IO Client
-   ↓
-WebSocket / Polling Fallback
-   ↓
-Node.js + Socket.IO Server
-   ↓
-In-memory Room State (Map<RoomId, Room>)
+
+Clients connect to the Socket.IO backend and join a room. Cursor movement, click events, presence changes, and activity events are broadcast to other clients in the same room.
+
+---
+
+## 🔄 Real-Time Flow
+
+1. User opens the SyncSpace frontend.
+2. User enters or generates a Room ID.
+3. Client establishes a Socket.IO connection.
+4. Client joins the selected room.
+5. Backend registers the user's socket and presence.
+6. Cursor movements are throttled before transmission.
+7. Server broadcasts cursor updates to other users.
+8. Clients interpolate remote cursor positions using `requestAnimationFrame`.
+9. Click events are broadcast to all room participants.
+10. Join/leave events update presence and the activity feed.
+11. Socket.IO reconnection automatically restores the room state.
+
+---
+
+## ⚡ Performance
+
+- Cursor updates are throttled to reduce network traffic.
+- Remote cursor targets are stored efficiently rather than triggering unnecessary React renders for every cursor packet.
+- `requestAnimationFrame` is used for smooth remote cursor interpolation.
+- Cursor targets are removed immediately when a user leaves.
+- Socket listeners, timers, and animation loops are cleaned up appropriately.
+
+---
+
+## 🔐 Security & Validation
+
+- Socket ownership is verified for cursor and click events.
+- Server validates and clamps cursor coordinates.
+- Socket.IO CORS is restricted to the deployed frontend.
+- Environment secrets are not committed.
+- `.env.local` is excluded through `.gitignore`.
+- `.env.example` documents required configuration.
+- Server-side validation prevents clients from spoofing another socket's identity.
+
+---
+
+## 📁 Project Structure
+
+```text
+syncspace/
+├── src/
+│   ├── components/
+│   │   ├── JoinRoom.tsx
+│   │   ├── CollaborationRoom.tsx
+│   │   ├── RemoteCursor.tsx
+│   │   ├── UserList.tsx
+│   │   ├── ConnectionStatus.tsx
+│   │   └── ClickRipple.tsx
+│   ├── hooks/
+│   │   └── useRealtime.ts
+│   ├── types/
+│   │   └── multiplayer.ts
+│   ├── utils/
+│   │   └── colors.ts
+│   ├── App.tsx
+│   ├── index.css
+│   └── main.tsx
+├── server/
+│   ├── src/
+│   │   ├── index.ts
+│   │   └── types.ts
+│   ├── package.json
+│   └── tsconfig.json
+├── public/
+├── .env.example
+├── .gitignore
+├── package.json
+├── tsconfig.json
+├── vercel.json
+└── vite.config.ts
 ```
 
 ---
 
-## Real-Time Flow
+## 💻 Local Development
 
-1. **User Joins a Room**: Client specifies username and roomId on the join screen and sends `join_room`.
-2. **Socket.IO Connection Established**: Transport establishes a reliable full-duplex WebSocket connection.
-3. **Server Registers Presence**: Server assigns the socket to the room, stores user metadata in the in-memory room store, and emits `room_state` to the newcomer while broadcasting `user_joined` to peers.
-4. **Cursor Updates Throttled**: As local mouse moves, coordinates are throttled to ~40 FPS (25ms window) before emitting `cursor_move`.
-5. **Server Broadcasts Updates**: Server validates coordinate bounds (`[0, 8000]`), verifies socket ownership, and broadcasts `cursor_update` only to room peers (`socket.to(roomId)`).
-6. **Clients Interpolate Remote Positions**: Receiving peers store target coordinates in refs and compute smooth positions every frame via `requestAnimationFrame` LERP (`pos += (target - pos) * 0.18`).
-7. **Disconnects Cleaned Up**: When a tab is closed, `disconnect` triggers automatic removal from room state, emits `user_left` to peers, and evicts empty rooms to prevent memory leaks.
-8. **Reconnection Restores Room Presence**: If connection drops, Socket.IO automatically reconnects and re-registers the user without requiring a manual page refresh.
+### Prerequisites
+- Node.js
+- npm
 
----
-
-## Performance
-
-- **~40 FPS Cursor Throttling**: Network bandwidth is conserved by preventing raw mouse events from flooding the socket.
-- **requestAnimationFrame Interpolation**: Cursor motion is decoupled from network packet arrival rate; display renders at the monitor's native refresh rate.
-- **Minimized React Renders**: Frequent coordinate updates bypass React component state by storing live targets in mutable refs, triggering renders only on display updates.
-- **Room-Scoped Broadcasts**: Events are strictly dispatched to relevant rooms via `socket.to(roomId).emit()`, guaranteeing $O(N)$ efficiency per room rather than global $O(M)$ broadcast overhead.
-- **In-Memory Room State**: Instantaneous lookups using native `Map<string, Room>` without disk or database roundtrip latency.
-
----
-
-## Security / Validation
-
-- **Server-Side Validation**: All incoming payloads are validated for correct data types, length boundaries (roomId $\le$ 32 chars, username $\le$ 40 chars), and finite numbers.
-- **Socket Ownership Checks**: Each socket can only emit updates for the `userId` associated with its own connection, preventing identity spoofing.
-- **Room-Scoped Events**: Sockets must be active members of a room to broadcast to it.
-- **Coordinate Validation**: Numerical clamping restricts all $(X, Y)$ inputs to safe viewport boundaries (`0` to `8000`), preventing rendering glitches or overflow exploits.
-- **Safe User-Name Rendering**: User strings are rendered as standard React text nodes, preventing XSS injection.
-
----
-
-## Local Development
-
-### 1. Frontend Setup
+### Frontend
 ```bash
-# From the project root
 npm install
 npm run dev
 ```
-The frontend starts on `http://localhost:5173`.
+Frontend runs on: `http://localhost:5173`
 
-### 2. Backend Setup
+### Backend
+Open another terminal:
 ```bash
-# In another terminal
 cd server
 npm install
 npm run dev
 ```
-The backend starts on `http://localhost:3001`.
-
-### 3. Environment Variables
-Create `.env.local` in the project root:
-```env
-VITE_SOCKET_URL=http://localhost:3001
-```
-*(Note: `.env.local` is ignored by Git to keep environment configurations clean and private).*
+Backend runs on: `http://localhost:3001`
 
 ---
 
-## Deployment
+## 🔧 Environment Variables
 
-### Backend Deployment (Railway or Render)
-1. Link your repository: `https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync`
-2. Set Root Directory to: `server`
-3. Build Command: `npm run build`
-4. Start Command: `npm start`
-5. Environment Variables:
-   - `PORT`: (configured automatically by host)
-   - `FRONTEND_URL`: `https://YOUR-VERCEL-FRONTEND.vercel.app`
-6. Verify deployment by visiting:
-   ```
-   https://YOUR-BACKEND-URL/health
-   # Response: {"status":"ok"}
-   ```
+### Frontend
+- Local: `VITE_SOCKET_URL=http://localhost:3001`
+- Production: `VITE_SOCKET_URL=https://syncspace-backend-1rzf.onrender.com`
 
-### Frontend Deployment (Vercel)
-1. Import the repository: `https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync`
-2. Root Directory: `./` (or project root)
-3. Framework Preset: `Vite`
-4. Build Command: `npm run build`
-5. Output Directory: `dist`
-6. Environment Variables:
-   - `VITE_SOCKET_URL`: `https://YOUR-BACKEND-URL`
-7. Deploy.
+### Backend
+- Local: `FRONTEND_URL=http://localhost:5173`
+- Production: `FRONTEND_URL=https://real-time-multiplayer-cursor-state-tau.vercel.app`
+
+> Do not commit `.env.local` or other secret environment files.
 
 ---
 
-## Multiplayer Testing
+## ☁️ Deployment
 
-To test real-time synchronization across multiple users:
-1. Open your browser to the deployed frontend URL (or `http://localhost:5173`).
-2. Enter username **"User A"** and room ID **"ROOM1"**, then click **Join Room**.
-3. In a second tab/browser window, open the same URL, enter username **"User B"** and room ID **"ROOM1"**, then join.
-4. In a third tab/browser window, enter username **"User C"** and room ID **"ROOM1"**, then join.
-5. Move cursors across windows to observe real-time color-coded remote cursors with smooth interpolation.
-6. Click anywhere on the workspace to observe synchronized ripple animations across all peers.
-7. Close one tab to verify instant user departure and count decrement in remaining windows.
+### Frontend — Vercel
+- **Repository:** [https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync](https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync)
+- **Framework:** Vite
+- **Root Directory:** `./`
+- **Build Command:** `npm run build`
+- **Output:** `dist`
+- **Production Variable:** `VITE_SOCKET_URL=https://syncspace-backend-1rzf.onrender.com`
+
+### Backend — Render
+- **Repository:** [https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync](https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync)
+- **Root Directory:** `server`
+- **Build:** `npm run build`
+- **Start:** `npm start`
+- **Production Variable:** `FRONTEND_URL=https://real-time-multiplayer-cursor-state-tau.vercel.app`
+- **Health Endpoint:** [https://syncspace-backend-1rzf.onrender.com/health](https://syncspace-backend-1rzf.onrender.com/health)
 
 ---
 
-## Future Improvements
+## 🧪 Production Verification
 
-*(Possible future work)*
-- **Persistent Rooms**: Saving canvas state and room session history across server restarts.
-- **Authentication**: User accounts with OAuth and secure JWT tokens.
-- **Redis Adapter for Horizontal Scaling**: Distributing Socket.IO instances across multiple container nodes using Redis pub/sub.
-- **Database Persistence**: Storing user profiles and collaborative workspaces in PostgreSQL or MongoDB.
-- **Collaborative Drawing**: Vector stroke and freehand synchronized canvas sketching.
-- **Shared Text Editing**: Operational transformation (OT) or CRDT-based live collaborative text pads.
+| Test | Result |
+|---|---|
+| Frontend deployment | ✅ PASS |
+| Backend deployment | ✅ PASS |
+| Backend health check | ✅ PASS |
+| 2-user multiplayer | ✅ PASS |
+| 3-user multiplayer | ✅ PASS |
+| Cursor synchronization | ✅ PASS |
+| Click synchronization | ✅ PASS |
+| Activity feed | ✅ PASS |
+| Presence tracking | ✅ PASS |
+| Reconnection | ✅ PASS |
+| Mobile responsiveness | ✅ PASS |
+| Frontend build | ✅ PASS |
+| Backend build | ✅ PASS |
+| TypeScript checks | ✅ PASS |
+| CORS validation | ✅ PASS |
+| Socket validation | ✅ PASS |
+| Coordinate validation | ✅ PASS |
+
+---
+
+## 👥 Multiplayer Test
+
+1. Open the [Live Demo](https://real-time-multiplayer-cursor-state-tau.vercel.app).
+2. Create or enter a Room ID.
+3. Open the same Live Demo in another browser/incognito window.
+4. Join the same Room ID with another username.
+5. Verify both users appear in the participant list.
+6. Move the mouse and verify remote cursor synchronization.
+7. Click the workspace and verify the shared click ripple.
+8. Open a third client to verify 3-user synchronization.
+
+---
+
+## 📌 Production Note
+
+> The Render free instance may spin down after inactivity. The first request after inactivity can therefore take longer while the backend wakes up.
+
+---
+
+## 📋 Submission Links
+
+- **Live Application:** [https://real-time-multiplayer-cursor-state-tau.vercel.app](https://real-time-multiplayer-cursor-state-tau.vercel.app)
+- **GitHub Repository:** [https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync](https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync)
+- **Backend:** [https://syncspace-backend-1rzf.onrender.com](https://syncspace-backend-1rzf.onrender.com)
+- **Health Check:** [https://syncspace-backend-1rzf.onrender.com/health](https://syncspace-backend-1rzf.onrender.com/health)
