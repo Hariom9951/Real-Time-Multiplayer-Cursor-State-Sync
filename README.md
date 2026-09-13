@@ -1,248 +1,181 @@
 # SyncSpace
+### Real-Time Multiplayer Cursor & State Synchronization
 
-**Real-Time Multiplayer Cursor Synchronization**
+## 🚀 Live Demo
+- **Frontend App**: [https://real-time-multiplayer-cursor-state-sync.vercel.app](https://real-time-multiplayer-cursor-state-sync.vercel.app) *(or your deployed Vercel domain)*
+- **Backend Health Check**: [https://syncspace-production.up.railway.app/health](https://syncspace-production.up.railway.app/health) *(or your deployed Railway/Render domain)*
 
-A collaborative workspace where multiple users can see each other's live cursors, click ripples, and presence — synchronized in real-time over WebSocket.
+## 📦 GitHub Repository
+[https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync](https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync)
+
+---
+
+## Overview
+
+**SyncSpace** is an ultra-low latency, real-time multiplayer workspace where distributed users interact within shared collaborative rooms. Users experience synchronous multiplayer presence with high-performance cursor tracking, visual click waves, live participant rosters, and instant join/leave synchronization powered by WebSockets and Socket.IO.
+
+---
+
+## Features
+
+- **Real-Time Multiplayer Cursor Synchronization**: Live coordinates transmitted across peers with sub-25ms network response.
+- **Room-Based Collaboration**: Isolated collaboration spaces identified by Room IDs, preventing cross-room event leaking.
+- **User Presence**: Live tracking of online peers, participant counts, and unique deterministic color assignments.
+- **Smooth Cursor Interpolation**: Linear interpolation (LERP) decoupled from network packets via `requestAnimationFrame` for buttery-smooth 60 FPS remote cursor motion.
+- **Shared Click Indicators**: Interactive ripple wave animations broadcast across peers on canvas clicks.
+- **Real-Time Activity Feed**: Toast and event updates notifying users when peers join or leave.
+- **Reconnection Handling**: Resilient Socket.IO reconnection logic with exponential backoff and automatic room re-join.
+- **Server-Side Validation**: Strict input boundary validation, string length limits, numeric coordinate bounds, and socket ownership verification.
+- **Performance-Conscious Cursor Updates**: ~40 FPS client throttling with coordinate refs, avoiding wasteful React re-renders.
+- **Responsive UI**: Modern glassmorphic interface built with Tailwind CSS, supporting varied screen sizes and keyboard shortcuts.
+
+---
+
+## Tech Stack
+
+### Frontend
+- **React (v19)**
+- **TypeScript**
+- **Vite**
+- **Tailwind CSS**
+- **Socket.IO Client**
+- **Lucide Icons & Canvas Confetti**
+
+### Backend
+- **Node.js**
+- **Express**
+- **Socket.IO (v4)**
+- **TypeScript & tsx**
+- **CORS**
 
 ---
 
 ## Architecture
 
 ```
-Browser (React + TypeScript)
-        │
-        │  socket.io-client
-        │  WebSocket / HTTP long-poll
-        ▼
-Node.js + Socket.IO Server (TypeScript)
-        │
-        │  In-memory Map<roomId, Room>
-        │  Room → Map<userId, User>
-        ▼
-  Broadcast to room peers
-```
-
-The server is **stateless between restarts** (in-memory only). Each browser tab is one socket connection. There is no database, no authentication.
-
----
-
-## Project Structure
-
-```
-syncspace/                  ← Vite + React + TypeScript frontend
-  src/
-    components/
-      JoinRoom.tsx           ← Landing / join form
-      CollaborationRoom.tsx  ← Full workspace + sidebar
-      RemoteCursor.tsx       ← Per-user cursor (interpolated)
-      UserList.tsx           ← Participants panel
-      ConnectionStatus.tsx   ← Animated connection badge
-      ClickRipple.tsx        ← Shared click animation
-    hooks/
-      useRealtime.ts         ← All Socket.IO logic (the core hook)
-    types/
-      multiplayer.ts         ← Shared TypeScript types
-    utils/
-      colors.ts              ← Deterministic user color palette
-  .env.local                 ← VITE_SOCKET_URL=http://localhost:3001
-  .env.example               ← Template
-
-server/                     ← Node.js + Express + Socket.IO backend
-  src/
-    index.ts                 ← Socket event handlers + room management
-    types.ts                 ← Server-side payload types
+Browser
+   ↓
+React + TypeScript
+   ↓
+Socket.IO Client
+   ↓
+WebSocket / Polling Fallback
+   ↓
+Node.js + Socket.IO Server
+   ↓
+In-memory Room State (Map<RoomId, Room>)
 ```
 
 ---
 
-## Getting Started
+## Real-Time Flow
 
-### 1. Start the backend
+1. **User Joins a Room**: Client specifies username and roomId on the join screen and sends `join_room`.
+2. **Socket.IO Connection Established**: Transport establishes a reliable full-duplex WebSocket connection.
+3. **Server Registers Presence**: Server assigns the socket to the room, stores user metadata in the in-memory room store, and emits `room_state` to the newcomer while broadcasting `user_joined` to peers.
+4. **Cursor Updates Throttled**: As local mouse moves, coordinates are throttled to ~40 FPS (25ms window) before emitting `cursor_move`.
+5. **Server Broadcasts Updates**: Server validates coordinate bounds (`[0, 8000]`), verifies socket ownership, and broadcasts `cursor_update` only to room peers (`socket.to(roomId)`).
+6. **Clients Interpolate Remote Positions**: Receiving peers store target coordinates in refs and compute smooth positions every frame via `requestAnimationFrame` LERP (`pos += (target - pos) * 0.18`).
+7. **Disconnects Cleaned Up**: When a tab is closed, `disconnect` triggers automatic removal from room state, emits `user_left` to peers, and evicts empty rooms to prevent memory leaks.
+8. **Reconnection Restores Room Presence**: If connection drops, Socket.IO automatically reconnects and re-registers the user without requiring a manual page refresh.
 
+---
+
+## Performance
+
+- **~40 FPS Cursor Throttling**: Network bandwidth is conserved by preventing raw mouse events from flooding the socket.
+- **requestAnimationFrame Interpolation**: Cursor motion is decoupled from network packet arrival rate; display renders at the monitor's native refresh rate.
+- **Minimized React Renders**: Frequent coordinate updates bypass React component state by storing live targets in mutable refs, triggering renders only on display updates.
+- **Room-Scoped Broadcasts**: Events are strictly dispatched to relevant rooms via `socket.to(roomId).emit()`, guaranteeing $O(N)$ efficiency per room rather than global $O(M)$ broadcast overhead.
+- **In-Memory Room State**: Instantaneous lookups using native `Map<string, Room>` without disk or database roundtrip latency.
+
+---
+
+## Security / Validation
+
+- **Server-Side Validation**: All incoming payloads are validated for correct data types, length boundaries (roomId $\le$ 32 chars, username $\le$ 40 chars), and finite numbers.
+- **Socket Ownership Checks**: Each socket can only emit updates for the `userId` associated with its own connection, preventing identity spoofing.
+- **Room-Scoped Events**: Sockets must be active members of a room to broadcast to it.
+- **Coordinate Validation**: Numerical clamping restricts all $(X, Y)$ inputs to safe viewport boundaries (`0` to `8000`), preventing rendering glitches or overflow exploits.
+- **Safe User-Name Rendering**: User strings are rendered as standard React text nodes, preventing XSS injection.
+
+---
+
+## Local Development
+
+### 1. Frontend Setup
 ```bash
+# From the project root
+npm install
+npm run dev
+```
+The frontend starts on `http://localhost:5173`.
+
+### 2. Backend Setup
+```bash
+# In another terminal
 cd server
 npm install
-npm run dev          # starts on http://localhost:3001
+npm run dev
 ```
+The backend starts on `http://localhost:3001`.
 
-### 2. Start the frontend
-
-```bash
-cd syncspace          # (from project root)
-npm install
-npm run dev          # starts on http://localhost:5173
+### 3. Environment Variables
+Create `.env.local` in the project root:
+```env
+VITE_SOCKET_URL=http://localhost:3001
 ```
-
-### 3. Test multiplayer
-
-1. Open **Tab A** → `http://localhost:5173` → enter name + room ID → Join
-2. Open **Tab B** → same URL → same room ID → Join
-3. Move the mouse in Tab B → cursor appears in Tab A
-4. Click the workspace → ripple animation appears in both tabs
-5. Close Tab B → Tab A user count drops to 1
+*(Note: `.env.local` is ignored by Git to keep environment configurations clean and private).*
 
 ---
 
-## Environment Variables
+## Deployment
 
-| Variable | Side | Default | Description |
-|---|---|---|---|
-| `VITE_SOCKET_URL` | Frontend | `http://localhost:3001` | Backend Socket.IO URL |
-| `PORT` | Backend | `3001` | HTTP listen port |
-| `CLIENT_ORIGIN` | Backend | `http://localhost:5173` | CORS allowed origin |
+### Backend Deployment (Railway or Render)
+1. Link your repository: `https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync`
+2. Set Root Directory to: `server`
+3. Build Command: `npm run build`
+4. Start Command: `npm start`
+5. Environment Variables:
+   - `PORT`: (configured automatically by host)
+   - `FRONTEND_URL`: `https://YOUR-VERCEL-FRONTEND.vercel.app`
+6. Verify deployment by visiting:
+   ```
+   https://YOUR-BACKEND-URL/health
+   # Response: {"status":"ok"}
+   ```
 
-Copy `.env.example` to `.env.local` and set `VITE_SOCKET_URL` for your environment.
-
----
-
-## Socket Events
-
-### Client → Server
-
-| Event | Payload | Description |
-|---|---|---|
-| `join_room` | `{ roomId, userId, username, color }` | Join or re-join a room |
-| `cursor_move` | `{ roomId, userId, x, y }` | Broadcast cursor position |
-| `cursor_click` | `{ roomId, userId, x, y }` | Broadcast click ripple |
-| `leave_room` | `{ roomId, userId }` | Explicit clean leave |
-
-### Server → Client
-
-| Event | Payload | Description |
-|---|---|---|
-| `room_state` | `{ roomId, users[] }` | Full room snapshot on join |
-| `user_joined` | `{ user }` | New participant arrived |
-| `user_left` | `{ userId }` | Participant disconnected |
-| `cursor_update` | `{ userId, x, y }` | Remote cursor moved |
-| `click_update` | `{ userId, username, color, x, y }` | Shared click ripple |
+### Frontend Deployment (Vercel)
+1. Import the repository: `https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync`
+2. Root Directory: `./` (or project root)
+3. Framework Preset: `Vite`
+4. Build Command: `npm run build`
+5. Output Directory: `dist`
+6. Environment Variables:
+   - `VITE_SOCKET_URL`: `https://YOUR-BACKEND-URL`
+7. Deploy.
 
 ---
 
-## How It Works
+## Multiplayer Testing
 
-### Joining a Room
-
-1. User fills in a display name and room ID on the landing screen.
-2. A stable `userId` is generated and persisted in `sessionStorage` (so browser refreshes reuse the same ID, preventing phantom duplicates).
-3. When the socket connects, `join_room` is emitted.
-4. The server adds the user to the room, sends `room_state` (current users) to the new joiner, and broadcasts `user_joined` to existing users.
-
-### Presence (Late Joiners)
-
-The server holds an in-memory `Map<roomId, Room>` where each room stores `Map<userId, ServerUser>`. When a user joins late, they immediately receive `room_state` containing all current occupants — no polling required.
-
-### Cursor Synchronization
-
-```
-Mouse move event
-      │
-      ▼
-Throttle check (25ms / ~40 Hz ceiling)
-      │
-      ├── Too soon → discard
-      └── OK → socket.emit('cursor_move', { x, y })
-                        │
-                        ▼
-              Server validates + clamps coords
-                        │
-                        ▼
-              socket.to(room).emit('cursor_update')
-                        │
-                        ▼
-              cursorTargetsRef.current.set(userId, { targetX, targetY })
-              (no React setState — no re-render on cursor packet)
-                        │
-                        ▼
-              requestAnimationFrame loop (60 Hz display rate)
-              LERP displayCursor → targetCursor
-              setRemoteUsers only when position changed
-```
-
-**Key performance decision:** `cursor_update` packets do **not** call `setRemoteUsers`. They write only to a ref (`cursorTargetsRef`). The rAF loop reads those refs and calls `setRemoteUsers` at display framerate. This decouples the ~40 Hz network rate from React's render cycle.
-
-### Cursor Interpolation
-
-Remote cursors use linear interpolation (LERP) at factor `0.18`:
-
-```
-displayX += (targetX - displayX) * 0.18
-```
-
-Applied every animation frame (~60 Hz). This produces smooth cursor movement even when network updates arrive at 30–40 Hz, and naturally absorbs network jitter without a heavy animation library.
-
-When a user disconnects, their cursor target is deleted immediately from the ref map and React state, so the cursor disappears on the next frame.
-
-### Click Ripples
-
-1. User clicks the workspace → `cursor_click` emitted.
-2. Server validates coords, clamps them, and broadcasts `click_update` to **all** users in the room (including sender).
-3. Each client renders a `ClickRipple` component with an expanding ring animation.
-4. The ripple auto-removes after 700ms via `setTimeout`.
-
-### Reconnection
-
-Socket.IO is configured with:
-- `reconnection: true`
-- `reconnectionAttempts: 10`
-- `reconnectionDelayMax: 5000ms`
-
-When the socket reconnects, the `connect` event fires again → `join_room` is re-emitted → server re-adds the user, removes the old entry (dedup), sends `room_state`. The UI updates automatically.
-
-During disconnection the `DisconnectedBanner` component shows a yellow/red banner at the top.
-
-### Disconnect Cleanup
-
-On socket `disconnect`, the server:
-1. Finds the associated `userId` (tracked per-socket scope).
-2. Removes the user from the room's `Map`.
-3. Broadcasts `user_left` to remaining users.
-4. Deletes empty rooms to prevent memory leaks.
+To test real-time synchronization across multiple users:
+1. Open your browser to the deployed frontend URL (or `http://localhost:5173`).
+2. Enter username **"User A"** and room ID **"ROOM1"**, then click **Join Room**.
+3. In a second tab/browser window, open the same URL, enter username **"User B"** and room ID **"ROOM1"**, then join.
+4. In a third tab/browser window, enter username **"User C"** and room ID **"ROOM1"**, then join.
+5. Move cursors across windows to observe real-time color-coded remote cursors with smooth interpolation.
+6. Click anywhere on the workspace to observe synchronized ripple animations across all peers.
+7. Close one tab to verify instant user departure and count decrement in remaining windows.
 
 ---
 
-## Performance Considerations
+## Future Improvements
 
-| Concern | Approach |
-|---|---|
-| Mouse move rate | Throttled to 40 Hz (25ms gate, timestamp-based) |
-| Cursor rendering | requestAnimationFrame loop, LERP interpolation |
-| React re-renders on cursor | Avoided — targets stored in ref, not state |
-| Server broadcasts | Scoped to Socket.IO rooms (`socket.to(roomId)`) |
-| Memory | Empty rooms deleted on last user leave |
-| Coordinate safety | Server clamps x/y to `[0, 8000]` range |
-| Socket ownership | `cursor_move` verifies socket.id matches stored socketId |
-
----
-
-## Security Basics
-
-- Server validates all event payloads (type checks, length limits).
-- Cursor move/click events verify the socket owns the claimed `userId` (prevents spoofing).
-- User-provided names are rendered as React text nodes (no `dangerouslySetInnerHTML`).
-- No sensitive data stored. No authentication.
-- Room state is purely in-memory and evicted when empty.
-
----
-
-## Production Deployment
-
-**Frontend** (Vercel):
-1. Set `VITE_SOCKET_URL=https://your-backend.example.com` in Vercel environment variables.
-2. `npm run build` → deploy `dist/`.
-
-**Backend** (Railway / Render / Fly.io):
-1. Set `CLIENT_ORIGIN=https://your-frontend.vercel.app`.
-2. Set `PORT` (usually auto-set by the platform).
-3. `npm run build && npm start`.
-
----
-
-## Scripts
-
-| Directory | Command | Purpose |
-|---|---|---|
-| `syncspace/` | `npm run dev` | Frontend dev server |
-| `syncspace/` | `npm run build` | Frontend production build |
-| `server/` | `npm run dev` | Backend dev (tsx watch) |
-| `server/` | `npm run build` | Backend TypeScript compile |
-| `server/` | `npm start` | Backend production start |
+*(Possible future work)*
+- **Persistent Rooms**: Saving canvas state and room session history across server restarts.
+- **Authentication**: User accounts with OAuth and secure JWT tokens.
+- **Redis Adapter for Horizontal Scaling**: Distributing Socket.IO instances across multiple container nodes using Redis pub/sub.
+- **Database Persistence**: Storing user profiles and collaborative workspaces in PostgreSQL or MongoDB.
+- **Collaborative Drawing**: Vector stroke and freehand synchronized canvas sketching.
+- **Shared Text Editing**: Operational transformation (OT) or CRDT-based live collaborative text pads.
