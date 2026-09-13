@@ -2,8 +2,9 @@
 ### Real-Time Multiplayer Cursor & State Synchronization
 
 ## 🚀 Live Demo
-- **Frontend App**: [https://real-time-multiplayer-cursor-state-sync.vercel.app](https://real-time-multiplayer-cursor-state-sync.vercel.app) *(or your deployed Vercel domain)*
-- **Backend Health Check**: [https://syncspace-production.up.railway.app/health](https://syncspace-production.up.railway.app/health) *(or your deployed Railway/Render domain)*
+- **Live Frontend**: [https://real-time-multiplayer-cursor-state-tau.vercel.app](https://real-time-multiplayer-cursor-state-tau.vercel.app)
+- **Live Backend**: [https://syncspace-backend-1rzf.onrender.com](https://syncspace-backend-1rzf.onrender.com)
+- **Backend Health Check**: [https://syncspace-backend-1rzf.onrender.com/health](https://syncspace-backend-1rzf.onrender.com/health)
 
 ## 📦 GitHub Repository
 [https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync](https://github.com/Hariom9951/Real-Time-Multiplayer-Cursor-State-Sync)
